@@ -1,7 +1,8 @@
 {
   "dependencies": {
     "node-telegram-bot-api": "^0.64.0",
-    "openai": "^4.19.0"
+    "openai": "^4.19.0",
+    "sqlite3": "^5.1.6"
   },
   "type": "module"
 }
