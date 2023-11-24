@@ -5,7 +5,23 @@ export default {
     getAvailableTreadId: getAvailableTreadId,
     askGPT: askGPT,
     listMessages: listMessages,
+    log: log,
 };
+
+console.log('tools.js loaded');
+
+import fs from 'fs/promises';
+
+async function log(threadId, message) {
+    try {
+        const dateStr = new Date().toISOString().replace(/:/g, '-');
+        const text = `${dateStr}: ${message.replaceAll('\n', ' ')}\n`;
+
+        await fs.writeFile(`./${threadId}.log`, text, { flag: 'a+' }, err => { console.log(err); });
+    } catch (err) {
+        console.log(err);
+    }
+}
 
 async function getTreadId(chatId) {
     try {

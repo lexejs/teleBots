@@ -1,0 +1,31 @@
+{
+    "name": "getPrice",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "weight": {
+                "type": "number",
+                "description": "Weight in kilograms"
+            },
+            "dimension1": {
+                "type": "number",
+                "description": "size in centimeters"
+            },
+            "dimension2": {
+                "type": "number",
+                "description": "size in centimeters"
+            },
+            "dimension3": {
+                "type": "number",
+                "description": "size in centimeters"
+            }
+        },
+        "required": [
+            "weight",
+            "dimension1",
+            "dimension2",
+            "dimension3"
+        ]
+    },
+    "description": "Get the current parcel price, Weight in kilograms, size in centimeters"
+}

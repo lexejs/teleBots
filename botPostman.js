@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import Telegram from "node-telegram-bot-api";
 import creds from "./credentials.js";
 import tools from "./tools.js";
+import price from "./price.js";
 
 const openai = new OpenAI({
     apiKey: creds.openAIKey,
@@ -43,6 +44,7 @@ async function waitForRunCompleted(threadId, runId) {
             threadId,
             runId
         );
+
         if (runStatus.status === 'expired') {
             console.log(runStatus.status);
             return;
@@ -53,25 +55,34 @@ async function waitForRunCompleted(threadId, runId) {
 
             for (const tool_call of runStatus.required_action.submit_tool_outputs.tool_calls) {
                 if (tool_call.type === 'function') {
+                    const argument = JSON.parse(tool_call.function.arguments);
+                    tools.log(tool_call.function.name, tool_call.function.arguments);
+                    let response = '';
+
                     if (tool_call.function.name === 'getDateTime') {
-                        const obj = JSON.parse(tool_call.function.arguments);
+                        response = new Date().toLocaleString("en-US", { timeZone: argument.timezone });
 
-                        console.log(obj.timezone);
-                        const run = await openai.beta.threads.runs.submitToolOutputs(
-                            threadId,
-                            runId,
-                            {
-                                tool_outputs: [
-                                    {
-                                        tool_call_id: tool_call.id,
-                                        output: new Date().toLocaleString("en-US", { timeZone: obj.timezone }),
-                                    }
-                                ],
-                            }
-                        );
-
+                    } else if (tool_call.function.name === 'askdaddy') {
+                        response = "Ваш запрос передан в отдел продаж, с вами свяжутся. Никуда не уходите. Спасибо."
+                        // bot.SendMessage(daddyChatId, argument.text);
+                    } else if (tool_call.function.name === 'getPrice') {
+                        response = await price.getPrice(argument.weight, argument.dimension1, argument.dimension2, argument.dimension3);
                     }
-                    console.log(tool_call);
+
+                    tools.log(tool_call.function.name, response);
+                    const run = await openai.beta.threads.runs.submitToolOutputs(
+                        threadId,
+                        runId,
+                        {
+                            tool_outputs: [
+                                {
+                                    tool_call_id: tool_call.id,
+                                    output: response
+                                }
+                            ],
+                        }
+                    );
+
                 }
             }
         }
@@ -87,8 +98,7 @@ async function getAvailableTreadId(chatId) {
         threadId = emptyThread.id;
 
         db.run(`INSERT INTO chat_tread(key, value) VALUES(?, ?)`, [chatId, threadId]);
-
-        //console.log('Created thread for ' + msg.chat.username);
+        tools.log(chatId, 'created tread ' + threadId);
     }
 
     while (currentRunsForTread.indexOf(threadId) !== -1) {
@@ -127,11 +137,13 @@ async function askGPT(text, chatId) {
         for (const message of messages.data) {
             resultString += message.content[0].text.value + '\n';
         }
-
+        tools.log(chatId, "postman: " + resultString);
         return resultString;
     }
     catch (error) {
         console.error(error);
+        tools.log(chatId, error.message);
+        tools.log(chatId, error.stack);
 
         if (error.status === 400 && error.message.toString().indexOf("Can't add messages to thread") !== -1) {
             //'400 Can't add messages to thread_wWXS3YmDG9ipBc2BolC3DD4T while a run run_6eARPHWFixbUf1LKGpD2Hac6 is active.'
@@ -154,6 +166,7 @@ bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
     const userName = msg.chat.username;
     bot.sendMessage(chatId, `Hello ${userName}!'`);
+    tools.log(chatId, 'started ' + userName);
 });
 
 // regex not started with a /
@@ -161,11 +174,12 @@ bot.onText(/^[^\/]/, async (msg) => {
 
     const chatId = msg.chat.id;
 
-    console.log(msg.text);
+    tools.log(chatId, msg.chat.username + ": " + msg.text + "\n");
 
     if (creds.allowedUsers.indexOf(chatId.toString()) === -1) {
         bot.sendMessage(chatId, chatId + ' are not allowed to use this bot');
         console.log(msg.chat.username + ' are not allowed to use this bot');
+        tools.log(chatId, 'not allowed');
         return;
     }
 
