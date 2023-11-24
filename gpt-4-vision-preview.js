@@ -1,6 +1,5 @@
 import OpenAI from "openai";
 import creds from "./credentials.js";
-
 const openai = new OpenAI({
     apiKey: creds.openAIKey,
 });
@@ -8,22 +7,25 @@ const openai = new OpenAI({
 async function main() {
     const response = await openai.chat.completions.create({
         model: "gpt-4-vision-preview",
-        max_tokens: 300,
+        max_tokens: 4000,
         messages: [
             {
                 role: "user",
                 content: [
-                    { type: "text", text: "describe photo in russian?" },
+                    {
+                        type: "text", text: "Extract all available amounts and values. "
+                    },
                     {
                         type: "image_url",
                         image_url: {
-                            "url": "https://miro.medium.com/v2/resize:fit:720/format:webp/1*YMJDp-kqus7i-ktWtksNjg.jpeg",
+                            "url": "https://lh3.googleusercontent.com/drive-viewer/AK7aPaBoSuoo-KVDAu13OzMtSWi8nF2106Hy-WcuPoGQtYtRVtLFz4IUU2_FeMglcBimQHj0rFE7Lvvor2YYSD58-TAPLs5z-g=w1037-h1252", "detail": "high"
                         },
                     },
                 ],
             },
         ],
     });
+    console.log(response);
     console.log(response.choices[0]);
 }
 main();
