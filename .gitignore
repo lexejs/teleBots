@@ -128,3 +128,4 @@ dist
 credentials.js
 mydb.sqlite
 ubersetzen.sqlite
+postman.sqlite

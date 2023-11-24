@@ -1,16 +1,11 @@
-import OpenAI from "openai";
-import Telegram from "node-telegram-bot-api";
-import config from "./credentials.js";
-
-import sqlite3 from 'sqlite3';
-let db = new sqlite3.Database('./ubersetzen.sqlite');
-
-const openai = new OpenAI({
-    apiKey: config.openAIKey,
-});
-const assistantId = config.ubersetzenAssistId;
-
-db.run('CREATE TABLE IF NOT EXISTS chat_tread(key text PRIMARY KEY, value text)');
+// Description: Tools for working with OpenAI API
+export default {
+    getTreadId: getTreadId,
+    waitForRunCompleted: waitForRunCompleted,
+    getAvailableTreadId: getAvailableTreadId,
+    askGPT: askGPT,
+    listMessages: listMessages,
+};
 
 async function getTreadId(chatId) {
     try {
@@ -112,9 +107,9 @@ async function listMessages(threadId) {
     return resultString;
 }
 
-async function main() {
-    console.log('start');
-    let list = await listMessages('thread_YTCqDuK6klqhzM6hl4XKzito');
-    console.log(list);
-}
-main();
+// async function main() {
+//     console.log('start');
+//     let list = await listMessages('thread_YTCqDuK6klqhzM6hl4XKzito');
+//     console.log(list);
+// }
+// main();
