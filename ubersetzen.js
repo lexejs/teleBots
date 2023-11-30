@@ -1,8 +1,8 @@
-import OpenAI from "openai";
-import Telegram from "node-telegram-bot-api";
-import config from "./credentials.js";
+var OpenAI = require("openai");
+var Telegram = require("node-telegram-bot-api");
+var config = require("./credentials.js");
+var sqlite3 = require('sqlite3');
 
-import sqlite3 from 'sqlite3';
 let db = new sqlite3.Database('./ubersetzen.sqlite');
 
 const openai = new OpenAI({

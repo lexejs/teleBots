@@ -18,7 +18,7 @@ async function main() {
                     {
                         type: "image_url",
                         image_url: {
-                            "url": "https://lh3.googleusercontent.com/drive-viewer/AK7aPaBoSuoo-KVDAu13OzMtSWi8nF2106Hy-WcuPoGQtYtRVtLFz4IUU2_FeMglcBimQHj0rFE7Lvvor2YYSD58-TAPLs5z-g=w1037-h1252", "detail": "high"
+                            "url": "https://lh3.googleusercontent.com/", "detail": "high"
                         },
                     },
                 ],
