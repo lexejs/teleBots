@@ -32,7 +32,7 @@ function checkAuthorized(msg) {
 }
 
 bot.onText(/\/start/, (msg) => {
-    bot.sendMessage(msg.chat.id, `Completion activated!`);
+    bot.sendMessage(msg.chat.id, `Assistant activated!`);
     states[msg.chat.id] = "start";
     console.log(msg.chat.id, "started " + msg.chat.username, states[msg.chat.id]);
 });
@@ -44,7 +44,7 @@ bot.onText(/\/ubersetzen/, (msg) => {
 });
 
 bot.onText(/\/translatek/, (msg) => {
-    bot.sendMessage(msg.chat.id, `TranslatekPL activated!'`);
+    bot.sendMessage(msg.chat.id, `TranslatekPL włączony!'`);
     states[msg.chat.id] = "TranslatekPL"; 
     console.log(msg.chat.id, "started " + msg.chat.username, states[msg.chat.id]);
 });
