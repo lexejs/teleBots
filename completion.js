@@ -16,6 +16,9 @@ function getSystemPrompt(msg) {
     if (states[msg.chat.id] == "ubersetzen") {
         return creds.ubersetzenPrompt;
     }
+    if (states[msg.chat.id] == "TranslatekPL") {
+        return creds.TranslatekPLPrompt;
+    }
     return creds.defaultCompletionPrompt;
 }
 function checkAuthorized(msg) {
@@ -31,14 +34,21 @@ function checkAuthorized(msg) {
 bot.onText(/\/start/, (msg) => {
     bot.sendMessage(msg.chat.id, `Completion activated!`);
     states[msg.chat.id] = "start";
-    console.log(msg.chat.id, "started " + msg.chat.username);
+    console.log(msg.chat.id, "started " + msg.chat.username, states[msg.chat.id]);
 });
 
 bot.onText(/\/ubersetzen/, (msg) => {
     bot.sendMessage(msg.chat.id, `Translator activated!'`);
-    states[msg.chat.id] = "ubersetzen";
-    console.log(msg.chat.id, "started " + msg.chat.username);
+    states[msg.chat.id] = "ubersetzen"; 
+    console.log(msg.chat.id, "started " + msg.chat.username, states[msg.chat.id]);
 });
+
+bot.onText(/\/translatek/, (msg) => {
+    bot.sendMessage(msg.chat.id, `TranslatekPL activated!'`);
+    states[msg.chat.id] = "TranslatekPL"; 
+    console.log(msg.chat.id, "started " + msg.chat.username, states[msg.chat.id]);
+});
+
 
 
 bot.onText(/\/image/, (msg) => {
@@ -58,14 +68,69 @@ bot.onText(/^[^\/]/, async (msg) => {
     if (!checkAuthorized(msg)) return;
 
     bot.sendChatAction(msg.chat.id, "typing");
-    const systemPrompt = getSystemPrompt(msg);
 
-    getCompletion(msg.text, systemPrompt).then(function (result) {
-        bot.sendMessage(msg.chat.id, result, {
+    const systemPrompt = getSystemPrompt(msg);
+   
+    await streamCompletion(msg.text, systemPrompt, msg);
+});
+
+async function streamCompletion(text, systemPrompt, msg) {
+    try {
+        const completion = await openai.chat.completions.create({
+            messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: text },
+            ],
+            model: "gpt-4-1106-preview",
+            stream: true,
+        });
+        
+        let responseId = "";
+        let result = "";
+        let sentResult = 0;
+
+        for await (const chunk of completion) {
+            const delta = (chunk.choices[0].delta.content ?? "").toString();
+            result += delta;
+            // console.log("DELTA: " + delta);
+
+            if (!result
+                || result.length == sentResult
+                || (delta.length < 2 || delta.indexOf(' ') < 0) && !chunk.choices[0].finish_reason)
+                continue;
+            // console.log(" SENT: " + sentResult + " LENGTH: " + result.length + "RESULT: " + result);
+
+            if (responseId == "") {
+                const respMsg = await bot.sendMessage(msg.chat.id, result, {
+                    reply_to_message_id: msg.message_id,
+                });
+                responseId = respMsg.message_id;
+                sentResult = result.length;
+
+            } else {
+                await bot.editMessageText(result, {
+                    chat_id: msg.chat.id,
+                    message_id: responseId,
+                });
+                sentResult = result.length;
+            }
+
+            // if (chunk.choices[0].finish_reason == "stop") {
+            //     break;
+            // }
+
+        }
+      
+    } catch (error) {
+        
+        console.error(error.message);
+        
+        await bot.sendMessage(msg.chat.id, error.message, {
             reply_to_message_id: msg.message_id,
         });
-    });
-});
+       
+    }
+}
 
 async function getCompletion(text, systemPrompt) {
     try {
