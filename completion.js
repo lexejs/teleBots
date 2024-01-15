@@ -8,8 +8,16 @@ const openai = new OpenAI({
     apiKey: creds.openAIKey,
 });
 
+const states = [];
+
 console.log("starting bot");
 
+function getSystemPrompt(msg) {
+    if (states[msg.chat.id] == "ubersetzen") {
+        return creds.ubersetzenPrompt;
+    }
+    return creds.defaultCompletionPrompt;
+}
 function checkAuthorized(msg) {
     if (creds.allowedUsers.indexOf(msg.chat.id.toString()) == -1) {
         bot.sendMessage(msg.chat.id, "unauthorized", {
@@ -21,9 +29,14 @@ function checkAuthorized(msg) {
 }
 
 bot.onText(/\/start/, (msg) => {
-    bot.sendMessage(msg.chat.id, `Hello ${msg.chat.username}!'`);
-    bot.sendMessage(-1001928644986, JSON.stringify(msg, null, 2));
+    bot.sendMessage(msg.chat.id, `Completion activated!`);
+    states[msg.chat.id] = "start";
+    console.log(msg.chat.id, "started " + msg.chat.username);
+});
 
+bot.onText(/\/ubersetzen/, (msg) => {
+    bot.sendMessage(msg.chat.id, `Translator activated!'`);
+    states[msg.chat.id] = "ubersetzen";
     console.log(msg.chat.id, "started " + msg.chat.username);
 });
 
@@ -45,19 +58,20 @@ bot.onText(/^[^\/]/, async (msg) => {
     if (!checkAuthorized(msg)) return;
 
     bot.sendChatAction(msg.chat.id, "typing");
+    const systemPrompt = getSystemPrompt(msg);
 
-    const completion = getCompletion(msg.text).then(function (result) {
+    getCompletion(msg.text, systemPrompt).then(function (result) {
         bot.sendMessage(msg.chat.id, result, {
             reply_to_message_id: msg.message_id,
         });
     });
 });
 
-async function getCompletion(text) {
+async function getCompletion(text, systemPrompt) {
     try {
         const completion = await openai.chat.completions.create({
             messages: [
-                { role: "system", content: creds.ubersetzenPrompt },
+                { role: "system", content: systemPrompt },
                 { role: "user", content: text },
             ],
             model: "gpt-4-1106-preview",
@@ -74,13 +88,18 @@ async function getImage(text) {
     if (text == "" || text == undefined || text == "/image") {
         return "provide description";
     }
+    try {
+        const image = await openai.images.generate({
+            model: "dall-e-3",
+            prompt: text,
+        });
 
-    const image = await openai.images.generate({
-        model: "dall-e-3",
-        prompt: text,
-    });
-
-    return image.data;
+        return image.data;
+    }
+    catch (error) {
+        console.error(error);
+        return error;
+    }
 }
 
 // const http = require("node:http");
