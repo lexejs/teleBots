@@ -96,7 +96,7 @@ async function streamCompletion(text, systemPrompt, msg) {
 
             if (!result
                 || result.length == sentResult
-                || (delta.length < 2 || delta.indexOf(' ') < 0) && !chunk.choices[0].finish_reason)
+                || (delta.length < 5 || delta.indexOf(' ') < 0) && !chunk.choices[0].finish_reason)
                 continue;
             // console.log(" SENT: " + sentResult + " LENGTH: " + result.length + "RESULT: " + result);
 
