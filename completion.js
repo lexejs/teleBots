@@ -10,7 +10,7 @@ const openai = new OpenAI({
 
 const states = [];
 
-console.log("starting bot");
+log("starting bot");
 
 function getSystemPrompt(msg) {
     if (states[msg.chat.id] == "ubersetzen") {
@@ -32,21 +32,21 @@ function checkAuthorized(msg) {
 }
 
 bot.onText(/\/start/, (msg) => {
-    bot.sendMessage(msg.chat.id, `Assistant activated!`);
     states[msg.chat.id] = "start";
-    console.log(msg.chat.id, "started " + msg.chat.username, states[msg.chat.id]);
+    bot.sendMessage(msg.chat.id, `Assistant activated!`);
+    log(msg.chat.id, "started " + msg.chat.username, states[msg.chat.id]);
 });
 
 bot.onText(/\/ubersetzen/, (msg) => {
+    states[msg.chat.id] = "ubersetzen";
     bot.sendMessage(msg.chat.id, `Translator activated!'`);
-    states[msg.chat.id] = "ubersetzen"; 
-    console.log(msg.chat.id, "started " + msg.chat.username, states[msg.chat.id]);
+    log(msg.chat.id, "started " + msg.chat.username, states[msg.chat.id]);
 });
 
 bot.onText(/\/translatek/, (msg) => {
+    states[msg.chat.id] = "TranslatekPL";
     bot.sendMessage(msg.chat.id, `TranslatekPL włączony!'`);
-    states[msg.chat.id] = "TranslatekPL"; 
-    console.log(msg.chat.id, "started " + msg.chat.username, states[msg.chat.id]);
+    log(msg.chat.id, "started " + msg.chat.username, states[msg.chat.id]);
 });
 
 
@@ -70,7 +70,7 @@ bot.onText(/^[^\/]/, async (msg) => {
     bot.sendChatAction(msg.chat.id, "typing");
 
     const systemPrompt = getSystemPrompt(msg);
-   
+
     await streamCompletion(msg.text, systemPrompt, msg);
 });
 
@@ -84,7 +84,7 @@ async function streamCompletion(text, systemPrompt, msg) {
             model: "gpt-4-1106-preview",
             stream: true,
         });
-        
+
         let responseId = "";
         let result = "";
         let sentResult = 0;
@@ -92,27 +92,40 @@ async function streamCompletion(text, systemPrompt, msg) {
         for await (const chunk of completion) {
             const delta = (chunk.choices[0].delta.content ?? "").toString();
             result += delta;
-            // console.log("DELTA: " + delta);
+            // log("DELTA: " + delta);
 
-            if (!result
-                || result.length == sentResult
-                || (delta.length < 5 || delta.indexOf(' ') < 0) && !chunk.choices[0].finish_reason)
+            if ((!delta
+                || result.length < sentResult + 20
+                || (delta.indexOf(' ') < 0) && (delta.indexOf('.') < 0))
+                && !chunk.choices[0].finish_reason)
                 continue;
-            // console.log(" SENT: " + sentResult + " LENGTH: " + result.length + "RESULT: " + result);
+            // log(" SENT: " + sentResult + " LENGTH: " + result.length + "RESULT: " + result);
 
             if (responseId == "") {
-                const respMsg = await bot.sendMessage(msg.chat.id, result, {
-                    reply_to_message_id: msg.message_id,
-                });
-                responseId = respMsg.message_id;
-                sentResult = result.length;
+                try {
+                    const respMsg = await bot.sendMessage(msg.chat.id, result, {
+                        reply_to_message_id: msg.message_id,
+                    });
+                    responseId = respMsg.message_id;
+                    sentResult = result.length;
+                }
+                catch (error) {
+                    await logError(error.message);
+                }
+
 
             } else {
-                await bot.editMessageText(result, {
-                    chat_id: msg.chat.id,
-                    message_id: responseId,
-                });
-                sentResult = result.length;
+                try {
+                    await bot.editMessageText(result, {
+                        chat_id: msg.chat.id,
+                        message_id: responseId,
+                    });
+                    sentResult = result.length;
+                }
+                catch (error) {
+                    await logError(error.message);
+                }
+
             }
 
             // if (chunk.choices[0].finish_reason == "stop") {
@@ -120,15 +133,15 @@ async function streamCompletion(text, systemPrompt, msg) {
             // }
 
         }
-      
+
     } catch (error) {
-        
-        console.error(error.message);
-        
+
+        await logError(error.message);
+
         await bot.sendMessage(msg.chat.id, error.message, {
             reply_to_message_id: msg.message_id,
         });
-       
+
     }
 }
 
@@ -144,7 +157,7 @@ async function getCompletion(text, systemPrompt) {
         const res = completion.choices[0].message.content;
         return res;
     } catch (error) {
-        console.error(error);
+        await logError(error);
         return error;
     }
 }
@@ -162,23 +175,17 @@ async function getImage(text) {
         return image.data;
     }
     catch (error) {
-        console.error(error);
+        await logError(error);
         return error;
     }
 }
 
-// const http = require("node:http");
-
-// const hostname = "127.0.0.1";
-// const port = 3000;
-
-// const server = http.createServer((req, res) => {
-//     res.statusCode = 200;
-//     res.setHeader("Content-Type", "text/plain");
-//     res.end("Hello World\n");
-// });
-
-// server.listen(port, hostname, () => {
-//     console.log(`Server running at http://${hostname}:${port}/`);
-// });
-
+function log(msg) {
+    console.log(new Date().toUTCString(), msg);
+}
+async function logError(msg) {
+    console.error(new Date().toUTCString(), msg);
+    if (msg.indexOf("429 Too Many Requests") > -1) {
+        await new Promise(resolve => setTimeout(resolve, 10000));
+    }
+}
