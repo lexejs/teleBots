@@ -164,7 +164,7 @@ async function getCompletion(text, systemPrompt) {
 
 async function getImage(text) {
     if (text == "" || text == undefined || text == "/image") {
-        return "provide description";
+        return "example: /image description";
     }
     try {
         const image = await openai.images.generate({
@@ -185,7 +185,8 @@ function log(msg) {
 }
 async function logError(msg) {
     console.error(new Date().toUTCString(), msg);
-    if (msg.indexOf("429 Too Many Requests") > -1) {
+    const msgText = msg.toString();
+    if (msgText && msgText.indexOf("429 Too Many Requests") > -1) {
         await new Promise(resolve => setTimeout(resolve, 10000));
     }
 }
